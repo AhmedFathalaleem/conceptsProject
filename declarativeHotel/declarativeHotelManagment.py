@@ -70,7 +70,11 @@ def filter_bltin(things, condition_fn):
     # Skip the current room if the condition is not met
     return filter_bltin(things[1:], condition_fn)
 
-
+def reduce_bltin(func, data, initial):
+    if not data:  # Base case: empty list
+        return initial
+    # Apply the function to the accumulator and the first element
+    return reduce_bltin(func, data[1:], func(initial, data[0]))
 
 
 # Utility Functions
@@ -83,9 +87,6 @@ def find(data, condition_fn):
         return data[0]
     return find(data[1:], condition_fn)
 
-def update_data(data, condition_fn, update_fn):
-    #Update items in a collection based on a condition.
-    return list(map(lambda item: update_fn(item) if condition_fn(item) else item, data))
 
 
 
@@ -466,7 +467,8 @@ def show_bill(customer_id):
                 days_stayed = (datetime.strptime(check_out, "%Y-%m-%d") - datetime.strptime(check_in, "%Y-%m-%d")).days
                 return room_price * days_stayed
             return 0
-        return reduce(lambda acc, reservation: acc + compute_bill(reservation), reservations, 0)
+        transform_fn = lambda acc, reservation: acc + compute_bill(reservation)
+        return reduce_bltin(transform_fn, reservations, 0)
     total_bill = calculate_total_bill(reservations,get_rooms)    
     print(f"Total bill for customer {customer_id}: ${total_bill}")
 
@@ -492,49 +494,51 @@ def show_bill(customer_id):
 
 
 # Menu options.
-def main_menu():
-    return {
-        "1": ("Add Customer", lambda: add_customer()),
-        "2": ("Make Reservation", lambda: make_reservation()),
-        "3": ("Check Out", lambda: checkout()),
-        "4": ("View Available Rooms", view_available_rooms),
-        "5": ("Add Room", lambda: add_room()),
-        "6": ("Delete Room", lambda: delete_room()),
-        "7": ("Show Customers", lambda: show_customers()),
-        "8": ("Delete Customer", lambda: delete_customer()),
-        "9": ("Show Bill", lambda: show_bill(int(input("Enter customer ID to view the bill: ")))),
-        "10": ("Exit", lambda: "exit")
-    }
+create_tables()  # Run this once to create the tables
 
-def view_available_rooms():
-    rooms = get_rooms()
-    available_rooms = filter(lambda room: room["availability"], rooms)
-    formatted_rooms = map(lambda room: f"Room {room['roomNumber']} - {room['roomType']} - ${room['price']}", available_rooms)
-    print("\nAvailable Rooms:")
-    print("\n".join(formatted_rooms))
-
-def run_menu(menu):
-    """Recursively display the menu and execute selected options."""
+# Main loop for manual testing
+while True:
     print("\nMenu:")
-    for key, (description, _) in menu.items():
-        print(f"{key}. {description}")
+    print("1. Add Customer")
+    print("2. Make Reservation")
+    print("3. Check Out")
+    print("4. View Available Rooms")
+    print("5. Add Room")
+    print("6. Delete Room")
+    print("7. Show Customers")
+    print("8. Delete Customer")
+    print("9. Show Bill")
+    print("10. Exit")
     
-    choice = input("Choose an option: ").strip()
-    selected_option = menu.get(choice)
-
-    if selected_option:
-        _, action = selected_option
-        result = action()  # Perform the action
-        if result == "exit":
+    try:
+        choice = input("Choose an option: ")
+        if choice == "1":
+            add_customer()
+        elif choice == "2":
+            make_reservation()
+        elif choice == "3":
+            checkout()
+        elif choice == "4":
+            rooms = get_rooms()
+            print("\nAvailable Rooms:")
+            for room in rooms:
+                if room["availability"]:
+                    print(f"Room {room['roomNumber']} - {room['roomType']} - ${room['price']}")
+        elif choice == "5":
+            add_room()
+        elif choice == "6":
+            delete_room()
+        elif choice == "7":
+            show_customers()
+        elif choice == "8":
+            delete_customer()
+        elif choice == "9":
+            customer_id = int(input("Enter customer ID to view the bill: "))
+            show_bill(customer_id)
+        elif choice == "10":
             print("Exiting...")
-            return
-    else:
-        print("Invalid option, please try again.")
-    
-    # Recursively call the menu
-    run_menu(menu)
-
-# Run the program
-if __name__ == "__main__":
-    create_tables()  # Initialize tables
-    run_menu(main_menu())
+            break
+        else:
+            print("Invalid option, please try again.")
+    except Exception as e:
+        print(f"Unexpected error: {e}")
