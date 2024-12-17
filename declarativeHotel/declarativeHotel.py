@@ -1,6 +1,6 @@
 import sqlite3
 from datetime import datetime
-# Database Setup Functions
+#Database Setup Functions
 
 def create_connection():
     try:
