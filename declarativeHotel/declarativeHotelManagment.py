@@ -54,9 +54,21 @@ def create_tables():
         print(f"Error creating tables: {e}")
 
 
+# built version of filter , map
 
+def map_bltin(func, data):
+    if not data:  
+        return []
+    return [func(data[0])] + map_bltin(func, data[1:])
 
-
+def filter_bltin(things, condition_fn):
+    if not things:  # Base case: empty list
+        return []
+    # Check if the first room satisfies the condition
+    if condition_fn(things[0]):
+        return [things[0]] + filter_bltin(things[1:], condition_fn)
+    # Skip the current room if the condition is not met
+    return filter_bltin(things[1:], condition_fn)
 
 
 
@@ -65,7 +77,11 @@ def create_tables():
 
 def find(data, condition_fn):
     #Find an item in a collection based on a condition.
-    return next(filter(condition_fn, data), None)
+    if not data:  # Base case: empty list
+        return None
+    if condition_fn(data[0]):  # Check the first element
+        return data[0]
+    return find(data[1:], condition_fn)
 
 def update_data(data, condition_fn, update_fn):
     #Update items in a collection based on a condition.
@@ -121,15 +137,16 @@ def get_rooms():
     result = execute_query(query, fetch=True)
     if result is None:
         return []
-    return list(map(lambda room: {"roomNumber": room[0], "roomType": room[1], "price": room[2], "availability": room[3]}, result or []))
+    transform_fn = lambda room: {"roomNumber": room[0],"roomType": room[1],"price": room[2],"availability": room[3],}
+    return map_bltin(transform_fn, result)
 
 def get_customers():
     query = 'SELECT * FROM customers'
     result = execute_query(query, fetch=True)
     if result is None:
         return []
-    
-    return list(map(lambda customer: {"id": customer[0], "name": customer[1], "contact": customer[2], "payment": customer[3]}, result))
+    transform_fn = lambda customer: {"id": customer[0],"name": customer[1],"contact": customer[2],"payment": customer[3],}
+    return map_bltin(transform_fn, result)
 
 def get_reservations_for_customer(customer_id):
     query = '''
@@ -212,9 +229,9 @@ def delete_customer_from_db(customer_id):
     reservation_query = 'SELECT roomNumber FROM reservations WHERE customer_id = ?'
     reserved_rooms = execute_query(reservation_query, (customer_id,), fetch=True)
     if reserved_rooms:
-        list(map(lambda room: checkout_room_from_db(room[0]), reserved_rooms))
-
-    
+        transform_fn = lambda room: checkout_room_from_db(room[0])
+        map_bltin(transform_fn, reserved_rooms)
+ 
     delete_customer_query = 'DELETE FROM customers WHERE id = ?'
     execute_query(delete_customer_query, (customer_id,))
     print(f"Customer with ID {customer_id} and their reservations deleted successfully!")
@@ -239,7 +256,7 @@ def delete_customer_from_db(customer_id):
 # Retrieve and display available rooms.
 def available_rooms():
     rooms = get_rooms()
-    return list(filter(lambda room: room["availability"], rooms))
+    return filter_bltin(rooms, lambda room: room["availability"])
 
 
 
@@ -283,7 +300,8 @@ def make_reservation():
         return
 
     print("\nAvailable rooms:")
-    room_info = map(lambda room: f"Room {room['roomNumber']} - {room['roomType']} - ${room['price']}", rooms)
+    transform_fn = lambda room: f"Room {room['roomNumber']} - {room['roomType']} - ${room['price']}"
+    room_info = map_bltin(transform_fn,rooms)    
     print("\n".join(room_info))
 
     try:
@@ -385,42 +403,26 @@ def add_customer():
 # Get and display customers inforamtion.
 def show_customers():
     try:
-        # Get customers and map them to their formatted details
-        def format_customer(customer):
-            # Get reservations for the customer
-            reservations = get_reservations_for_customer(customer["id"])
-            # Format the rented rooms
-            rooms_rented = [
-                f"Room {reservation[0]} - {reservation[1]}" for reservation in reservations
-            ]
-            return {
-                "id": customer["id"],
-                "name": customer["name"],
-                "contact": customer["contact"],
-                "payment": customer["payment"],
-                "rooms_rented": rooms_rented
-            }
-
         customers = get_customers()
-        formatted_customers = list(map(format_customer, customers))
+        print("\nList of Customers:")
 
-        # Create output for each customer
-        def format_output(customer):
-            customer_info = f"ID: {customer['id']}, Name: {customer['name']}, Contact: {customer['contact']}, Payment: {customer['payment']}"
-            if customer["rooms_rented"]:
-                rooms_info = "\n  Rooms rented:\n    " + "\n    ".join(customer["rooms_rented"])
-            else:
-                rooms_info = "\n  No rooms rented."
-            return customer_info + rooms_info
-
-        # Generate the final output
-        output = "\nList of Customers:\n" + "\n\n".join(map(format_output, formatted_customers))
-
-        # Display the output
-        print(output)
-
+        # Map over customers to print their details
+        transform_fn = lambda customer: print_customer_details(customer)
+        map_bltin(transform_fn, customers)        
     except Exception as e:
         print(f"Error displaying customers: {e}")
+
+def print_customer_details(customer):
+    """Print details of a single customer and their reservations."""
+    print(f"ID: {customer['id']}, Name: {customer['name']}, Contact: {customer['contact']}, Payment: {customer['payment']}")
+    reservations = get_reservations_for_customer(customer['id'])
+    
+    if reservations:
+        print("  Rooms rented:")
+        transform_fn = lambda reservation: print(f"    Room {reservation[0]} - {reservation[1]}")
+        map_bltin(transform_fn, reservations)
+    else:
+        print("  No rooms rented.")
 
 
 def delete_customer():
