@@ -1,6 +1,7 @@
 import sqlite3
 from datetime import datetime
 # Database Setup Functions
+# fares was here
 
 def create_connection():
     try:
