@@ -309,7 +309,7 @@ def show_bill(customer_id):
 create_tables()  # Run this once to create the tables
 
 # Main loop for manual testing
-while True:
+while __name__ =="__main__":
     print("\nMenu:")
     print("1. Add Customer")
     print("2. Make Reservation")
