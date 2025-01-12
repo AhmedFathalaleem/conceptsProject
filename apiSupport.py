@@ -1,6 +1,7 @@
-from flask import Flask, request , jsonify
-import imparativeHotel as IH
-from flask_restful import Resource,Api,reqparse,fields,marshal_with,abort
+from flask import Flask, request 
+import Models as models
+from flask_restful import Resource,Api,reqparse,fields,marshal_with
+
 app= Flask(__name__)
 api =Api(app)
 rooms_args = reqparse.RequestParser()
@@ -30,40 +31,42 @@ customers_fields={
 class Rooms(Resource):
     @marshal_with(rooms_fields)
     def get(self):
-            data = IH.get_rooms()
+            data = models.get_rooms()
             print("API Response:", data)  # Debugging
             return data
     
     @marshal_with(rooms_fields)
     def post(self):
         args= rooms_args.parse_args()
-        IH.add_room_to_db(args['roomNumber'],args['roomType'],args['price'],args['availability'])
+        models.add_room_to_db(args['roomNumber'],args['roomType'],args['price'],args['availability'])
         return 201
 
 class extra(Resource):
     @marshal_with(rooms_fields)
     def delete(self,id):
-        IH.delete_room_from_db(id)
-        return IH.get_rooms()
+        models.delete_room_from_db(id)
+        return models.get_rooms()
 
 class Customers(Resource):
     @marshal_with(customers_fields)  
     def get(self):
-        data = IH.get_customers()
+        data = models.get_customers()
         print("API Response:", data)  # Debugging
         return data
+    
+    @marshal_with(customers_fields)  
+    def post(self):
+        args= customers_args.parse_args()
+        models.add_customer_to_db(args['name'],args['contact'],args['payment'])
+        return 201
 
 class extra2(Resource):
     @marshal_with(customers_fields)
     def delete(self,id):
-        IH.delete_customer_from_db(id)
-        return IH.get_rooms()
+        models.delete_customer_from_db(id)
+        return models.get_rooms()
         
-    @marshal_with(customers_fields)  
-    def post(self):
-        args= customers_args.parse_args()
-        IH.add_customer_to_db(args['name'],args['contact'],args['payment'])
-        return 201
+
     
 
 api.add_resource(Rooms,'/')
