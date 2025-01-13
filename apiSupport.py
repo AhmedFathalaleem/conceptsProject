@@ -1,8 +1,10 @@
 from flask import Flask, request 
 import Models as models
+from flask_cors import CORS
 from flask_restful import Resource,Api,reqparse,fields,marshal_with
 
 app= Flask(__name__)
+CORS(app)
 api =Api(app)
 rooms_args = reqparse.RequestParser()
 rooms_args.add_argument('roomNumber',type=int, required=True ) 
