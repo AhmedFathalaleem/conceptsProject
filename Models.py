@@ -87,6 +87,26 @@ def get_customers():
         return []
     return [{"id": customer[0], "name": customer[1], "contact": customer[2], "payment": customer[3]} for customer in result]
 
+def get_reservations():
+    query = '''
+        SELECT 
+            r.roomNumber, 
+            r.roomType, 
+            res.customer_id, 
+            res.checkIn, 
+            res.checkOut
+        FROM 
+            reservations res
+        JOIN 
+            rooms r 
+        ON 
+            res.roomNumber = r.roomNumber;
+    '''
+    result = execute_query(query,fetch=True)
+    if result is None:
+        return []
+    return [{"roomNumber": row[0], "roomType": row[1], "customer_id": row[2], "checkIn": row[3], "checkOut":row[4]}for row in result]
+
 def get_reservations_for_customer(customer_id):
     query = '''
         SELECT r.roomNumber, r.roomType, res.checkIn, res.checkOut
@@ -94,8 +114,11 @@ def get_reservations_for_customer(customer_id):
         JOIN rooms r ON res.roomNumber = r.roomNumber
         WHERE res.customer_id = ?
     '''
-    result = execute_query(query, (customer_id,), fetch=True)
-    return result or []
+    data = execute_query(query, (customer_id,), fetch=True)
+    if data is None:
+        return []
+    result = data[0]
+    return {"roomNumber": result[0], "roomType": result[1], "customer_id": customer_id, "checkIn": result[2], "checkOut":result[3]}
 
 def add_room_to_db(room_number, room_type, price, availability):
     query = 'INSERT INTO rooms (roomNumber, roomType, price, availability) VALUES (?, ?, ?, ?)'
@@ -134,16 +157,21 @@ def delete_customer_from_db(customer_id):
     if reserved_rooms:
         for room in reserved_rooms:
             room_number = room[0]
-            checkout_room_from_db(room_number)
+            delete_reservation_from_db(room_number)
     
     delete_customer_query = 'DELETE FROM customers WHERE id = ?'
     execute_query(delete_customer_query, (customer_id,))
     print(f"Customer with ID {customer_id} and their reservations deleted successfully!")
 
-def checkout_room_from_db(room_number):
+def delete_reservation_from_db(room_number):
     delete_reservation_query = 'DELETE FROM reservations WHERE roomNumber = ?'
     update_room_query = 'UPDATE rooms SET availability = ? WHERE roomNumber = ?'
     
     execute_query(delete_reservation_query, (room_number,))
+    execute_query(update_room_query, (True, room_number))
+    print(f"Room {room_number} checked out successfully!")
+
+def checkout(room_number):
+    update_room_query = 'UPDATE rooms SET availability = ? WHERE roomNumber = ?'
     execute_query(update_room_query, (True, room_number))
     print(f"Room {room_number} checked out successfully!")

@@ -76,7 +76,7 @@ def make_reservation():
 def checkout():
     try:
         room_number = int(input("Enter room number to check out: "))
-        message = models.checkout_room_from_db(room_number)
+        message = models.delete_reservation_from_db(room_number)
         print(message)
     except ValueError:
         print("Invalid input. Please enter a valid room number.")
